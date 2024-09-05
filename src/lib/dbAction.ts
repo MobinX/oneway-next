@@ -18,12 +18,26 @@ export interface Note extends VectorDoc {
     summaryInsights: string[]
     summeryOuetost: string[]
     summeryLearnings: string[]
+    tags:string[]
     summery:string
     type: "video" | "selected-text"| "text"
-    url: string 
-    groupIds: string[]   
+    url?: string 
+    groupIds?: string[]   
 }
 
+export interface Dairy extends VectorDoc {
+    _id?: any
+    title: string
+    content: string
+    author: string
+    updated: Date
+    summaryInsights: string[]
+    summeryOuetost: string[]
+    summeryLearnings: string[]
+    tags:string[]
+    summery:string
+      
+}
 export interface GroupNote extends VectorDoc {
     _id?: any
     title: string
@@ -33,6 +47,7 @@ export interface GroupNote extends VectorDoc {
     summaryInsights: string[]
     summeryOuetost: string[]
     summeryLearnings: string[]
+    tags:string[]
     summery:string
 }
 
@@ -205,5 +220,63 @@ export const dropGroupNoteById = async (id: string) => {
 }
 
 
-// curl -X POST http://localhost:3000/api/notes -H 'Content-Type: application/json' -d "{\"title\": \"My Note\", \"content\": \"This is my note\", \"author\": \"mbin\", \"updated\": \"2023-03-01T12:00:00.000Z\", \"summaryInsights\": [\"insight1\", \"insight2\"], \"summeryOuetost\": [\"ouetost1\", \"ouetost2\"], \"summeryLearnings\": [\"learning1\", \"learning2\"], \"summery\": \"This is a summary\", \"type\": \"text\", \"url\": \"https://example.com\", \"groupIds\": [\"group1\", \"group2\"]}"
+export const createDairy = async (dairy: Dairy) => {
+    try {
+        const db = getClientDB();
+        const dairies = db.collection<Dairy>('dairies');
+        console.log(`* Inserting dairy ${dairy.title}...`);
+        return await dairies.insertOne({...dairy, $vector: await geminiEmbedding(dairy.content)});
+    } catch (error) {
+        console.log(`* Error inserting dairy ${dairy.title}: ${error}`);
+        return null;
+    }
+}
+
+export const updateDairy = async (id: string, dairy: Dairy) => {
+    try {
+        const db = getClientDB();
+        const dairies = db.collection<Dairy>('dairies');
+        console.log(`* Updating dairy ${id}...`);
+        return await dairies.updateOne({ _id: id }, { $set: { ...dairy, $vector: await geminiEmbedding(dairy.content)} });
+    } catch (error) {
+        console.log(`* Error updating dairy ${id}: ${error}`);
+        return null;
+    }
+}
+
+export const getDairiesByUserId = async (userId: string) => {
+    try {
+        const db = getClientDB();
+        const dairies = db.collection<Dairy>('dairies');
+        return await dairies.find({ author: userId }).toArray();
+    } catch (error) {
+        console.log(`* Error getting dairies for user ${userId}: ${error}`);
+        return null;
+    }
+}
+
+export const getDairyById = async (id: string) => {
+    try {
+        const db = getClientDB();   
+        const dairies = db.collection<Dairy>('dairies');
+        return await dairies.findOne({ _id: id });
+    } catch (error) {
+        console.log(`* Error getting dairy by id ${id}: ${error}`);
+        return null;
+    }
+}
+
+export const dropDairyById = async (id: string) => {
+    try {
+        const db = getClientDB();
+        const dairies = db.collection<Dairy>('dairies');
+        return await dairies.deleteOne({ _id: id });
+    } catch (error) {
+        console.log(`* Error dropping dairy by id ${id}: ${error}`);
+        return null;
+    }
+}
+
+
+// curl -X POST http://localhost:3000/api/notes -H 'Content-Type: application/json' -d "{\"title\": \"My Note\", \"content\": \"This is my note\", \"author\": \"mbin\", \"updated\": \"2023-03-01T12:00:00.000Z\", \"summaryInsights\": [\"insight1\", \"insight2\"], \"summeryOuetost\": [\"ouetost1\", \"ouetost2\"], \"summeryLearnings\": [\"learning1\", \"learning2\"], \"summery\": \"This is a summary\", \"type\": \"text\", \"url\": \"https://example.com\", \"groupIds\": [\"group1\", \"group2\"],\"tags\": [\"group1\", \"group2\"]}"
 // curl -G -X GET http://localhost:3000/api/notes -d author=mbin 
